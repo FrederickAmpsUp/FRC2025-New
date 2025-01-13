@@ -46,33 +46,86 @@ void Robot::RobotInit() {
   constexpr float frameHalfWidth = 0.5588f / 2.0f;
   constexpr float frameHalfDepth = 0.5588f / 2.0f;
 
-  this->fl = new ss::SwerveModule(*this->fld, *this->flt, *this->fle, -0.25, glm::vec2(-frameHalfWidth,  frameHalfDepth));
-  this->fr = new ss::SwerveModule(*this->frd, *this->frt, *this->fre, -0.07, glm::vec2( frameHalfWidth,  frameHalfDepth));
-  this->bl = new ss::SwerveModule(*this->bld, *this->blt, *this->ble, -0.19, glm::vec2(-frameHalfWidth, -frameHalfDepth));
-  this->br = new ss::SwerveModule(*this->brd, *this->brt, *this->bre,  0.02, glm::vec2( frameHalfWidth, -frameHalfDepth));
+  this->fl = new ss::SwerveModule(*this->fld, *this->flt, *this->fle, -0.25, glm::vec2(-frameHalfWidth, -frameHalfDepth));
+  this->fr = new ss::SwerveModule(*this->frd, *this->frt, *this->fre, -0.07, glm::vec2( frameHalfWidth, -frameHalfDepth));
+  this->bl = new ss::SwerveModule(*this->bld, *this->blt, *this->ble, -0.19, glm::vec2(-frameHalfWidth,  frameHalfDepth));
+  this->br = new ss::SwerveModule(*this->brd, *this->brt, *this->bre,  0.02, glm::vec2( frameHalfWidth,  frameHalfDepth));
 
   this->drive = new ss::SwerveDrive({*this->fl, *this->fr, *this->bl, *this->br});
 
-  this->guidance = new ss::Guidance(*this->drive);
-  this->nav = new ss::Navigation(this->joystick, *this->guidance);
-  this->control = new ss::Control(*this->drive, *this->nav);
+  this->guidance = new ss::Guidance(*this->drive, glm::vec2(0.0));
+  this->tnav = new ss::TeleopNavigation(this->joystick, *this->guidance);
+  using PathNode = ss::AutonNavigation::PathNode;
+  this->anav = new ss::AutonNavigation(*this->guidance, {
+    PathNode {
+      .duration = 2.0f,
+      .drive_to_pos = {
+        .pos = glm::vec2(-2.0, 1.0),
+        .ease_fn = nullptr,
+      },
+      .type = PathNode::Type::DRIVE_TO_POSITION
+    },
+    PathNode {
+      .duration = 2.0f,
+      .drive_to_pos = {
+        .pos = glm::vec2(-2.0, 3.0),
+        .ease_fn = nullptr,
+      },
+      .type = PathNode::Type::DRIVE_TO_POSITION
+    },
+    PathNode {
+      .duration = 2.0f,
+      .drive_to_pos = {
+        .pos = glm::vec2(-2.0, 0.0),
+        .ease_fn = nullptr,
+      },
+      .type = PathNode::Type::DRIVE_TO_POSITION
+    },
+    PathNode {
+      .duration = 2.0f,
+      .drive_to_pos = {
+        .pos = glm::vec2(-1.0, 1.0),
+        .ease_fn = nullptr,
+      },
+      .type = PathNode::Type::DRIVE_TO_POSITION
+    },
+    PathNode {
+      .duration = 2.0f,
+      .drive_to_pos = {
+        .pos = glm::vec2(0.0, 0.0),
+        .ease_fn = nullptr,
+      },
+      .type = PathNode::Type::DRIVE_TO_POSITION
+    },
+  });
+  this->control = new ss::Control(*this->drive);
 }
 void Robot::RobotPeriodic() {
 }
 
 void Robot::AutonomousInit() {
-  this->orchestra->Play();
+  this->anav->begin_navigation();
 }
 void Robot::AutonomousPeriodic() {
+  this->guidance->update_guidance();
+  this->anav->update_navigation();
+  frc::SmartDashboard::PutNumber("desired drive x", this->anav->get_desired_drive().x);
+  frc::SmartDashboard::PutNumber("desired drive y", this->anav->get_desired_drive().y);
+  this->control->update_control(*this->anav);
 }
 
 void Robot::TeleopInit() {
   this->orchestra->Stop();
+  this->tnav->begin_navigation();
+  this->anav->begin_navigation();
 }
 void Robot::TeleopPeriodic() {
   this->guidance->update_guidance();
-  this->nav->update_navigation();
-  this->control->update_control();
+  this->tnav->update_navigation();
+  this->anav->update_navigation();
+  frc::SmartDashboard::PutNumber("desired drive x", this->anav->get_desired_drive().x);
+  frc::SmartDashboard::PutNumber("desired drive y", this->anav->get_desired_drive().y);
+  this->control->update_control(*this->tnav);
 }
 
 void Robot::DisabledInit() {}
@@ -104,7 +157,8 @@ Robot::~Robot() {
   delete this->drive;
 
   delete this->guidance;
-  delete this->nav;
+  delete this->tnav;
+  delete this->anav;
   delete this->control;
 }
 

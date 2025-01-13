@@ -13,18 +13,21 @@ SwerveModule::SwerveModule(hardware::TalonFX& drive, hardware::TalonFX& turn, ct
 
     configs::Slot0Configs turnConf{};
     
-    turnConf.kP = 12.0;
-    turnConf.kI =  2.0;
-    turnConf.kD =  0.15;
+    turnConf.kP = 24.0;
+    turnConf.kI =  4.0;
+    turnConf.kD =  0.25;
     
     configs::FeedbackConfigs turnFeedbConf{};
 
     turnFeedbConf.FeedbackRemoteSensorID = this->m_encoder.GetDeviceID();
     turnFeedbConf.FeedbackSensorSource = ctre::phoenix6::signals::FeedbackSensorSourceValue::RemoteCANcoder;
+    turnFeedbConf.RotorToSensorRatio = motorToTurnRatio;
 
     configs::Slot0Configs driveConf{};
 
     driveConf.kP = 0.1;
+    driveConf.kI = 0.05;
+    driveConf.kD = 0.01;
 
     turn.GetConfigurator().Apply(turnConf);
     turn.GetConfigurator().Apply(turnFeedbConf);
@@ -57,9 +60,9 @@ static void optimizeAngle(float& speed, float& angle, float physicalAngle) {
 void SwerveModule::set(float speed, float angle) {
     angle = angle / (2.0 * M_PI);
 
-    float physicalAngle = (float)this->m_turn.GetPosition().GetValue();
+    float physicalAngle = (float)this->m_turn.GetPosition().GetValue()+this->m_encoderOffset;
 
-    if (glm::abs(speed) < 0.01) {
+    if (glm::abs(speed) < 0.001) {
         this->m_framesAtNull++;
         speed = 0.0f;
         angle = physicalAngle;
@@ -74,7 +77,7 @@ void SwerveModule::set(float speed, float angle) {
         angle = round(physicalAngle);
     }
 
-    auto p_ctr = controls::PositionVoltage(units::angle::turn_t(angle - this->m_encoderOffset)).WithSlot(0);
+    auto p_ctr = controls::PositionVoltage(units::angle::turn_t(angle-this->m_encoderOffset)).WithSlot(0);
     this->m_turn.SetControl(p_ctr);
 
     float wheelRPS = speed / (2.0 * M_PI * wheelRadius);

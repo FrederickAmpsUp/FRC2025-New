@@ -7,11 +7,16 @@ namespace ss {
 
 class Control {
 public:
-    Control(ss::SwerveDrive& swerve, ss::Navigation& navigation) : m_swerve(swerve), m_nav(navigation) {}
+    Control(ss::SwerveDrive& swerve) : m_swerve(swerve) {}
 
-    void update_control();
+    template<typename Nav>
+    void update_control(const Nav& nav) {
+        glm::vec2 drive = nav.get_desired_drive();
+        float turn = nav.get_desired_turn();
+
+        this->m_swerve.set(drive, turn);
+    }
 private:
     ss::SwerveDrive& m_swerve;
-    ss::Navigation& m_nav;
 };
 } // end namespace ss

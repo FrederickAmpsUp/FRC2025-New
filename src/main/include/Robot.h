@@ -46,6 +46,7 @@ private:
     frc::Joystick joystick;
 
     ss::Control *control;
-    ss::Navigation *nav;
+    ss::TeleopNavigation *tnav;
+    ss::AutonNavigation *anav;
     ss::Guidance *guidance;
 };

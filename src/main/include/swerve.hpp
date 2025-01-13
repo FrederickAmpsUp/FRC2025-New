@@ -30,7 +30,7 @@ public:
     static const float motorToTurnRatio;
 
     glm::vec2 framePosition() { return this->m_framePosition; }
-private:
+
     /**
      * Position relative to the center of the frame in meters
     */
@@ -59,7 +59,7 @@ public:
      * @param frameVelocity Target velocity (m/s) relative to the frame (+y = forward +x = right)
     */
     void set(glm::vec2 frameVelocity, float angularVelocity);
-private:
+
     std::vector<SwerveModule> m_modules;
 };
 }

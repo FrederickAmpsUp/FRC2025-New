@@ -9,7 +9,7 @@ namespace ss {
 
 class Guidance {
 public:
-    Guidance(ss::SwerveDrive& drive);
+    Guidance(ss::SwerveDrive& drive, glm::vec2 frameStartPosition);
 
     struct Info {
         /**
@@ -38,5 +38,6 @@ private:
     std::shared_ptr<Info> m_info;
     ss::SwerveDrive& m_drive;
     studica::AHRS m_navx;
+    std::vector<glm::vec2> m_modulePositions;
 };
 }

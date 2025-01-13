@@ -6,14 +6,15 @@
 
 namespace ss {
 
-class Navigation {
+class TeleopNavigation {
 public:
-    Navigation(frc::Joystick& joy, ss::Guidance& guidance) : m_joystick(joy), m_guidance(guidance) {}
+    TeleopNavigation(frc::Joystick& joy, ss::Guidance& guidance) : m_joystick(joy), m_guidance(guidance) {}
 
+    void begin_navigation();
     void update_navigation();
 
-    glm::vec2 get_desired_drive() { return this->m_desiredDrive; }
-    float get_desired_turn() { return this->m_desiredTurn; }
+    glm::vec2 get_desired_drive() const { return this->m_desiredDrive; }
+    float get_desired_turn() const { return this->m_desiredTurn; }
 private:
     glm::vec2 m_desiredDrive = glm::vec2(0.0); // m/s
     float m_desiredTurn; // radians/s
@@ -26,6 +27,43 @@ private:
     ss::Guidance& m_guidance;
 
     frc::Joystick& m_joystick;
+};
+
+class AutonNavigation {
+public:
+    struct PathNode {
+        float duration;
+            // some slightly cursed use of C features
+        union {
+            struct {
+                glm::vec2 pos;
+                float heading;
+                float (*ease_fn)(float);
+            } drive_to_pos;
+        };
+        enum class Type {
+            DRIVE_TO_POSITION
+        } type;
+    };
+
+    AutonNavigation(ss::Guidance& guidance, std::vector<PathNode> path) : m_guidance(guidance), m_path(path) {}
+
+    void begin_navigation();
+    void update_navigation();
+
+    glm::vec2 get_desired_drive() const { return this->m_desiredDrive; }
+    float get_desired_turn() const { return this->m_desiredTurn; }
+
+private:
+    float m_startTime;
+    float m_nodeStartTime;
+    std::shared_ptr<ss::Guidance::Info> m_nodeStartGuidance;
+    unsigned int m_pathIndex = 0;
+    std::vector<PathNode> m_path;
+    glm::vec2 m_desiredDrive;
+    float m_desiredTurn;
+
+    ss::Guidance& m_guidance;
 };
 
 } // end namespace ss
