@@ -41,6 +41,6 @@ void Guidance::update_guidance() {
     this->m_info->angularVelocity = 0.0;
     this->m_info->fieldVelocity = glm::vec2(0.0);
 
-    frc::SmartDashboard::PutNumber("angle", this->m_info->fieldAngle);
+    frc::SmartDashboard::PutNumber("angle", glm::degrees(this->m_info->fieldAngle));
 }
 }

@@ -63,6 +63,20 @@ private:
     glm::vec2 m_desiredDrive;
     float m_desiredTurn;
 
+    glm::vec2 m_driveError;
+    glm::vec2 m_driveErrorInt;
+
+    float m_turnError;
+    float m_turnErrorInt;
+
+    const float drive_kP = 0.10f;
+    const float drive_kI = 0.005f;
+    const float drive_kD = 0.01f;
+
+    const float turn_kP = 0.20f;
+    const float turn_kI = 0.02f;
+    const float turn_kD = 0.02f;
+
     ss::Guidance& m_guidance;
 };
 

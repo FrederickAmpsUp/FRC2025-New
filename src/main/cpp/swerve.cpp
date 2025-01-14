@@ -26,8 +26,6 @@ SwerveModule::SwerveModule(hardware::TalonFX& drive, hardware::TalonFX& turn, ct
     configs::Slot0Configs driveConf{};
 
     driveConf.kP = 0.1;
-    driveConf.kI = 0.05;
-    driveConf.kD = 0.01;
 
     turn.GetConfigurator().Apply(turnConf);
     turn.GetConfigurator().Apply(turnFeedbConf);
@@ -62,20 +60,13 @@ void SwerveModule::set(float speed, float angle) {
 
     float physicalAngle = (float)this->m_turn.GetPosition().GetValue()+this->m_encoderOffset;
 
-    if (glm::abs(speed) < 0.001) {
-        this->m_framesAtNull++;
+    if (glm::abs(speed) < 0.1) {
         speed = 0.0f;
         angle = physicalAngle;
-    } else {
-        this->m_framesAtNull = 0;
     }
-
+    
     optimizeAngle(speed, angle, physicalAngle);
 
-        // 20 iterations/sec, reset angle after 0.5s
-    if (this->m_framesAtNull / 20.0f > 0.5) {
-        angle = round(physicalAngle);
-    }
 
     auto p_ctr = controls::PositionVoltage(units::angle::turn_t(angle-this->m_encoderOffset)).WithSlot(0);
     this->m_turn.SetControl(p_ctr);

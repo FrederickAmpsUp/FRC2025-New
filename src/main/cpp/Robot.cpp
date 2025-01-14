@@ -14,9 +14,11 @@
 #include <frc2/command/button/NetworkButton.h>
 #include <frc2/command/InstantCommand.h>
 
-void Robot::RobotInit() {
-  frc::CameraServer::StartAutomaticCapture();
+static float smoothstep(float x) {
+  return 3.0f*x*x - 2.0f*x*x*x;
+}
 
+void Robot::RobotInit() {
   this->frd = new ctre::phoenix6::hardware::TalonFX(0b000 + 1);
   this->frt = new ctre::phoenix6::hardware::TalonFX(0b001 + 1);
   this->fld = new ctre::phoenix6::hardware::TalonFX(0b010 + 1);
@@ -61,7 +63,7 @@ void Robot::RobotInit() {
       .duration = 2.0f,
       .drive_to_pos = {
         .pos = glm::vec2(-2.0, 1.0),
-        .ease_fn = nullptr,
+        .ease_fn = smoothstep,
       },
       .type = PathNode::Type::DRIVE_TO_POSITION
     },
@@ -69,7 +71,8 @@ void Robot::RobotInit() {
       .duration = 2.0f,
       .drive_to_pos = {
         .pos = glm::vec2(-2.0, 3.0),
-        .ease_fn = nullptr,
+        .heading = 0.5f,
+        .ease_fn = smoothstep,
       },
       .type = PathNode::Type::DRIVE_TO_POSITION
     },
@@ -77,7 +80,8 @@ void Robot::RobotInit() {
       .duration = 2.0f,
       .drive_to_pos = {
         .pos = glm::vec2(-2.0, 0.0),
-        .ease_fn = nullptr,
+        .heading = 0.5f,
+        .ease_fn = smoothstep,
       },
       .type = PathNode::Type::DRIVE_TO_POSITION
     },
@@ -85,7 +89,8 @@ void Robot::RobotInit() {
       .duration = 2.0f,
       .drive_to_pos = {
         .pos = glm::vec2(-1.0, 1.0),
-        .ease_fn = nullptr,
+        .heading = 1.0f,
+        .ease_fn = smoothstep,
       },
       .type = PathNode::Type::DRIVE_TO_POSITION
     },
@@ -93,7 +98,8 @@ void Robot::RobotInit() {
       .duration = 2.0f,
       .drive_to_pos = {
         .pos = glm::vec2(0.0, 0.0),
-        .ease_fn = nullptr,
+        .heading = 1.0f,
+        .ease_fn = smoothstep,
       },
       .type = PathNode::Type::DRIVE_TO_POSITION
     },
