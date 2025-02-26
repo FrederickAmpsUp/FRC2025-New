@@ -39,7 +39,7 @@ public:
     ~Robot();
 private:
     ss::SwerveModule *fl, *fr, *bl, *br;
-    ctre::phoenix6::hardware::TalonFX *fld, *flt, *frd, *frt, *bld, *blt, *brd, *brt;
+    ctre::phoenix6::hardware::TalonFX *fld, *flt, *frd, *frt, *bld, *blt, *brd, *brt, *outtakeActuator;
     ctre::phoenix6::hardware::CANcoder *fle, *fre, *ble, *bre;
     ctre::phoenix6::Orchestra *orchestra;
     ss::SwerveDrive *drive;

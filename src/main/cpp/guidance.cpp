@@ -3,7 +3,7 @@
 
 namespace ss {
 
-Guidance::Guidance(ss::SwerveDrive& swerve, glm::vec2 frameStartPosition) : m_drive(swerve), m_navx(studica::AHRS::NavXComType::kUSB1) {
+Guidance::Guidance(ss::SwerveDrive& swerve, ctre::phoenix6::hardware::TalonFX& outtakeActuator, glm::vec2 frameStartPosition) : m_drive(swerve), m_outtakeActuator(outtakeActuator), m_navx(studica::AHRS::NavXComType::kMXP_SPI) {
     this->m_info = std::make_shared<Info>();
     this->m_info->fieldPosition = glm::vec2(0.0);
     for (const auto& mod : swerve.m_modules) {
@@ -13,6 +13,7 @@ Guidance::Guidance(ss::SwerveDrive& swerve, glm::vec2 frameStartPosition) : m_dr
 
 void Guidance::update_guidance() {
     this->m_info->fieldAngle = glm::radians(this->m_navx.GetAngle());
+    frc::SmartDashboard::PutNumber("angle", glm::degrees(this->m_info->fieldAngle));
 
     unsigned int i = 0;
     glm::vec2 center;
@@ -41,6 +42,6 @@ void Guidance::update_guidance() {
     this->m_info->angularVelocity = 0.0;
     this->m_info->fieldVelocity = glm::vec2(0.0);
 
-    frc::SmartDashboard::PutNumber("angle", glm::degrees(this->m_info->fieldAngle));
+    this->m_info->outtakeAngle = (float)this->m_outtakeActuator.GetPosition().GetValue() * 2.0 * M_PI / 108.0;
 }
 }

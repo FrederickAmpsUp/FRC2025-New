@@ -7,7 +7,7 @@ void TeleopNavigation::update_navigation() {
     std::shared_ptr<ss::Guidance::Info> guidanceInf = this->m_guidance.info();
 
     glm::vec2 drivePower = glm::vec2(this->m_joystick.GetX(), this->m_joystick.GetY());
-    if (glm::length(drivePower) < 0.1) drivePower = glm::vec2(0.0);
+    if (glm::length(drivePower) < 0.05) drivePower = glm::vec2(0.0);
 
     float throttle = this->m_joystick.GetThrottle() * -0.5 + 0.5;
     
@@ -25,6 +25,80 @@ void TeleopNavigation::update_navigation() {
 
     this->m_desiredDrive = driveSpeed;
     this->m_desiredTurn = turnSpeed;
+
+    if (this->m_joystick.GetRawButton(4)) {
+        this->m_desiredAlgaeIntakePower = 0.5;
+        this->m_desiredAlgaeIntakeAngle = c_algaeIntakeLower;
+        this->m_desiredOuttakePower = -0.3;
+        this->m_desiredOuttakeAngle = c_outtakeHoldAlgae;
+    } else if (this->m_joystick.GetRawButton(6)) {
+        this->m_desiredAlgaeIntakePower = -0.5;
+        this->m_desiredAlgaeIntakeAngle = c_algaeIntakeUpper;
+        this->m_desiredOuttakePower = -0.3;
+        this->m_desiredOuttakeAngle = c_outtakeHoldAlgae;
+    }
+
+    if (this->m_joystick.GetRawButton(2)) {
+        this->m_desiredAlgaeIntakeAngle = c_algaeIntakeIdle;
+        this->m_desiredAlgaeIntakePower = 0.0;
+        this->m_desiredOuttakePower = 0;
+        this->m_desiredOuttakeAngle = c_outtakeHoldAlgae;
+    }
+
+    if (this->m_joystick.GetRawButton(1)) {
+        this->m_desiredAlgaeIntakeAngle = c_algaeIntakeIdle;
+        this->m_desiredAlgaeIntakePower = 0.0;
+        this->m_desiredOuttakeAngle = c_outtakeReleaseAlgae;
+        this->m_desiredOuttakePower = -0.5;
+    }
+
+    if (this->m_joystick.GetRawButtonReleased(1)) {
+        this->m_desiredAlgaeIntakeAngle = c_algaeIntakeIdle;
+        this->m_desiredAlgaeIntakePower = 0.0;
+        this->m_desiredOuttakePower = 0;
+        this->m_desiredOuttakeAngle = c_outtakeIdle;
+    }
+
+    if (this->m_joystick.GetRawButton(3)) {
+        this->m_desiredOuttakePower = 1.0;
+        this->m_desiredOuttakeAngle = c_outtakeIntakeAlgae;
+    }
+
+    if (this->m_joystick.GetRawButtonReleased(3)) {
+        this->m_desiredOuttakePower = 0.0;
+        this->m_desiredOuttakeAngle = c_outtakeHoldAlgae;
+    }
+
+    if (this->m_joystick.GetRawButton(9)) {
+        this->m_desiredOuttakePower = 0.5;
+        this->m_desiredOuttakeAngle = c_outtakeIntakeCoral;
+    }
+    if (this->m_joystick.GetRawButtonReleased(9)) {
+        this->m_desiredOuttakePower = 0.0;
+        this->m_desiredOuttakeAngle = c_outtakeIdle;
+    }
+
+        if (this->m_joystick.GetRawButton(10)) {
+        this->m_desiredOuttakePower = -1.0;
+        this->m_desiredOuttakeAngle = c_outtakeReleaseCoral;
+    }
+    if (this->m_joystick.GetRawButtonReleased(10)) {
+        this->m_desiredOuttakePower = 0.0;
+        this->m_desiredOuttakeAngle = c_outtakeIdle;
+    }
+
+    unsigned int elevatorPos = this->m_joystick.GetRawButton(7) | (this->m_joystick.GetRawButton(8) << 1);
+    static const float elevatorPositions[] = {
+        0.0, 0.1, 0.2, 0.3 // TODO: determine the real positions
+    };
+
+    static const float capstanPositions[] = {
+        0.0, 0.1, 0.15, 0.3 // TODO: determine real positions
+    };
+
+    this->m_desiredCapstanAngle = capstanPositions[elevatorPos];
+    this->m_desiredElevatorHeight = elevatorPositions[elevatorPos];
+    this->m_desiredElevatorHeight = 0.0f;
 }
 
 void TeleopNavigation::begin_navigation() {
@@ -68,6 +142,8 @@ void AutonNavigation::update_navigation() {
 
             glm::vec2 delPos = desiredPos - fieldPos;
             float delAng = desiredAng - fieldAng;
+            while (delAng > 1.0) delAng -= 1.0;
+            while (delAng < 0.0) delAng += 1.0;
 
             frc::SmartDashboard::PutNumber("del pos x", delPos.x);
             frc::SmartDashboard::PutNumber("del pos y", delPos.y);

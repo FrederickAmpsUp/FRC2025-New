@@ -55,56 +55,32 @@ void Robot::RobotInit() {
 
   this->drive = new ss::SwerveDrive({*this->fl, *this->fr, *this->bl, *this->br});
 
-  this->guidance = new ss::Guidance(*this->drive, glm::vec2(0.0));
+  this->outtakeActuator = new ctre::phoenix6::hardware::TalonFX(17);
+
+  this->guidance = new ss::Guidance(*this->drive, *this->outtakeActuator, glm::vec2(0.0));
   this->tnav = new ss::TeleopNavigation(this->joystick, *this->guidance);
   using PathNode = ss::AutonNavigation::PathNode;
   this->anav = new ss::AutonNavigation(*this->guidance, {
     PathNode {
       .duration = 2.0f,
       .drive_to_pos = {
-        .pos = glm::vec2(-2.0, 1.0),
+        .pos = glm::vec2(0.0, 3.0),
+        .heading = 0.0f,
         .ease_fn = smoothstep,
       },
       .type = PathNode::Type::DRIVE_TO_POSITION
     },
     PathNode {
-      .duration = 2.0f,
+      .duration = 1.0f,
       .drive_to_pos = {
-        .pos = glm::vec2(-2.0, 3.0),
-        .heading = 0.5f,
-        .ease_fn = smoothstep,
+        .pos = glm::vec2(1.5, 3.0),
+        .heading = 0.0f,
+        .ease_fn = smoothstep
       },
       .type = PathNode::Type::DRIVE_TO_POSITION
-    },
-    PathNode {
-      .duration = 2.0f,
-      .drive_to_pos = {
-        .pos = glm::vec2(-2.0, 0.0),
-        .heading = 0.5f,
-        .ease_fn = smoothstep,
-      },
-      .type = PathNode::Type::DRIVE_TO_POSITION
-    },
-    PathNode {
-      .duration = 2.0f,
-      .drive_to_pos = {
-        .pos = glm::vec2(-1.0, 1.0),
-        .heading = 1.0f,
-        .ease_fn = smoothstep,
-      },
-      .type = PathNode::Type::DRIVE_TO_POSITION
-    },
-    PathNode {
-      .duration = 2.0f,
-      .drive_to_pos = {
-        .pos = glm::vec2(0.0, 0.0),
-        .heading = 1.0f,
-        .ease_fn = smoothstep,
-      },
-      .type = PathNode::Type::DRIVE_TO_POSITION
-    },
+    }
   });
-  this->control = new ss::Control(*this->drive);
+  this->control = new ss::Control(*this->drive, *this->outtakeActuator);
 }
 void Robot::RobotPeriodic() {
 }
@@ -157,6 +133,7 @@ Robot::~Robot() {
   delete this->blt;
   delete this->brd;
   delete this->brt;
+  delete this->outtakeActuator;
 
   delete this->orchestra;
 

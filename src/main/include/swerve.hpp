@@ -10,6 +10,7 @@
 
 #include <glm/gtx/string_cast.hpp>
 #include <iostream>
+#define M_PI 3.1415926535
 
 namespace ss {
 

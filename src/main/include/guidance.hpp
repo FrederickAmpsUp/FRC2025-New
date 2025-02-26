@@ -4,12 +4,14 @@
 #include <memory>
 #include <swerve.hpp>
 #include <studica/AHRS.h>
+#include <ctre/phoenix6/TalonFX.hpp>
+#define M_PI 3.1415926535
 
 namespace ss {
 
 class Guidance {
 public:
-    Guidance(ss::SwerveDrive& drive, glm::vec2 frameStartPosition);
+    Guidance(ss::SwerveDrive& drive, ctre::phoenix6::hardware::TalonFX& outtakeActuator, glm::vec2 frameStartPosition);
 
     struct Info {
         /**
@@ -29,6 +31,8 @@ public:
          * Angle relative to the field (0 = away from DS, positive = clockwise) in radians
         */
         float fieldAngle;
+
+        float outtakeAngle;
     };
 
     void update_guidance();
@@ -39,5 +43,6 @@ private:
     ss::SwerveDrive& m_drive;
     studica::AHRS m_navx;
     std::vector<glm::vec2> m_modulePositions;
+    ctre::phoenix6::hardware::TalonFX& m_outtakeActuator;
 };
 }
