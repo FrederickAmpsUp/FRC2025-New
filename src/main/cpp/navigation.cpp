@@ -60,7 +60,7 @@ void TeleopNavigation::update_navigation() {
     }
 
     if (this->m_joystick.GetRawButton(3)) {
-        this->m_desiredOuttakePower = 1.0;
+        this->m_desiredOuttakePower = 0.4;
         this->m_desiredOuttakeAngle = c_outtakeIntakeAlgae;
     }
 
@@ -70,8 +70,8 @@ void TeleopNavigation::update_navigation() {
     }
 
     if (this->m_joystick.GetRawButton(9)) {
-        this->m_desiredOuttakePower = 0.5;
-        this->m_desiredOuttakeAngle = c_outtakeIntakeCoral;
+        this->m_desiredOuttakePower = 1.0;
+        this->m_desiredOuttakeAngle = glm::mix(c_outtakeIntakeCoral, guidanceInf->outtakeAngle, 0.8);
     }
     if (this->m_joystick.GetRawButtonReleased(9)) {
         this->m_desiredOuttakePower = 0.0;
@@ -89,16 +89,15 @@ void TeleopNavigation::update_navigation() {
 
     unsigned int elevatorPos = this->m_joystick.GetRawButton(7) | (this->m_joystick.GetRawButton(8) << 1);
     static const float elevatorPositions[] = {
-        0.0, 0.1, 0.2, 0.3 // TODO: determine the real positions
+        0.0, 0.0, 0.45, 0.3 // TODO: determine the real positions
     };
 
     static const float capstanPositions[] = {
-        0.0, 0.1, 0.15, 0.3 // TODO: determine real positions
+        0.0, 0.33, 0.33, 0.125 // TODO: determine real positions
     };
 
     this->m_desiredCapstanAngle = capstanPositions[elevatorPos];
     this->m_desiredElevatorHeight = elevatorPositions[elevatorPos];
-    this->m_desiredElevatorHeight = 0.0f;
 }
 
 void TeleopNavigation::begin_navigation() {
@@ -168,6 +167,15 @@ void AutonNavigation::update_navigation() {
 
             this->m_desiredTurn = turnError * turn_kP + this->m_turnErrorInt * turn_kI + detdt * turn_kD;
         } break;
+        case PathNode::Type::CLEAN_ALGAE: {
+            if (node.clean_algae.level == LOWER) {
+                this->m_desiredAlgaeIntakeAngle = TeleopNavigation::c_algaeIntakeLower;
+                this->m_desiredAlgaeIntakePower = 0.5;
+            } else {
+                this->m_desiredAlgaeIntakeAngle = TeleopNavigation::c_algaeIntakeUpper;
+                this->m_desiredAlgaeIntakePower = -0.5;
+            }
+        } break;
         default:
             std::cerr << "ERR: invalid auto path node!" << std::endl;
     }
@@ -175,6 +183,8 @@ void AutonNavigation::update_navigation() {
     if (currentTime - this->m_nodeStartTime > node.duration) {
         this->m_desiredDrive = glm::vec2();
         this->m_desiredTurn = 0.0f;
+        this->m_desiredAlgaeIntakeAngle = 0.0f;
+        this->m_desiredAlgaeIntakePower = 0.0f;
         this->m_nodeStartTime = currentTime;
         this->m_pathIndex++;
 

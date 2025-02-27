@@ -61,23 +61,12 @@ void Robot::RobotInit() {
   this->tnav = new ss::TeleopNavigation(this->joystick, *this->guidance);
   using PathNode = ss::AutonNavigation::PathNode;
   this->anav = new ss::AutonNavigation(*this->guidance, {
-    PathNode {
-      .duration = 2.0f,
-      .drive_to_pos = {
-        .pos = glm::vec2(0.0, 3.0),
-        .heading = 0.0f,
-        .ease_fn = smoothstep,
+    ss::AutonNavigation::PathNode {
+      .duration = 2.0,
+      .clean_algae = {
+        LOWER
       },
-      .type = PathNode::Type::DRIVE_TO_POSITION
-    },
-    PathNode {
-      .duration = 1.0f,
-      .drive_to_pos = {
-        .pos = glm::vec2(1.5, 3.0),
-        .heading = 0.0f,
-        .ease_fn = smoothstep
-      },
-      .type = PathNode::Type::DRIVE_TO_POSITION
+      .type = ss::AutonNavigation::PathNode::Type::CLEAN_ALGAE
     }
   });
   this->control = new ss::Control(*this->drive, *this->outtakeActuator);

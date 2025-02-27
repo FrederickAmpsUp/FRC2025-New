@@ -38,25 +38,26 @@ private:
     float m_desiredElevatorHeight;
 
     float m_desiredCapstanAngle;
+public:
+    static constexpr float c_maxDriveSpeed = 5.0; // m/s
+    static constexpr float c_minDriveSpeed = 0.5; // m/s
+    static constexpr float c_maxTurnSpeed = 2.0 * M_PI; // radians/s
+    static constexpr float c_minTurnSpeed = 0.5 * M_PI; // radians/s
 
-    const float c_maxDriveSpeed = 5.0; // m/s
-    const float c_minDriveSpeed = 0.5; // m/s
-    const float c_maxTurnSpeed = 2.0 * M_PI; // radians/s
-    const float c_minTurnSpeed = 0.5 * M_PI; // radians/s
+    static constexpr float c_algaeIntakeIdle = 0.0;
+    static constexpr float c_algaeIntakeLower = 1.75;
+    static constexpr float c_algaeIntakeUpper = 2.15;
 
-    const float c_algaeIntakeIdle = 0.0;
-    const float c_algaeIntakeLower = 1.75;
-    const float c_algaeIntakeUpper = 2.15;
+    // TODO: offset these for starting position
+    static constexpr float c_outtakeIdle = -2.25;
+    static constexpr float c_outtakeHoldAlgae = -1.5;
+    static constexpr float c_outtakeReleaseAlgae = -1.6;
+    static constexpr float c_outtakeIntakeAlgae = -1.2;
 
-    const float c_outtakeIdle = -M_PI / 2.0;
-    const float c_outtakeHoldAlgae = -0.7;
-    const float c_outtakeReleaseAlgae = -0.8;
-    const float c_outtakeIntakeAlgae = -0.82;
+    static constexpr float c_outtakeIntakeCoral = 0.0;
+    static constexpr float c_outtakeReleaseCoral = -1.5;
 
-    const float c_outtakeIntakeCoral = 0.0;
-    const float c_outtakeReleaseCoral = -0.7;
-
-
+private:
     ss::Guidance& m_guidance;
 
     frc::Joystick& m_joystick;
@@ -73,9 +74,15 @@ public:
                 float heading;
                 float (*ease_fn)(float);
             } drive_to_pos;
+            struct {
+#define LOWER 0
+#define UPPER 1
+                int level;
+            } clean_algae;
         };
         enum class Type {
-            DRIVE_TO_POSITION
+            DRIVE_TO_POSITION,
+            CLEAN_ALGAE
         } type;
     };
 
@@ -88,7 +95,7 @@ public:
     float get_desired_turn() const { return this->m_desiredTurn; }
 
     float get_desired_algae_intake_power() const { return this->m_desiredAlgaeIntakePower; }
-    float get_desired_algae_intake_angle() const { return 0; }
+    float get_desired_algae_intake_angle() const { return this->m_desiredAlgaeIntakeAngle; }
     float get_desired_outtake_power() const { return 0; }
     float get_desired_outtake_angle() const { return 0; }
     float get_desired_elevator_height() const { return 0; }
@@ -104,6 +111,7 @@ private:
     float m_desiredTurn;
     
     float m_desiredAlgaeIntakePower;
+    float m_desiredAlgaeIntakeAngle;
 
     glm::vec2 m_driveError;
     glm::vec2 m_driveErrorInt;
