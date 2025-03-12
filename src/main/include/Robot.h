@@ -13,10 +13,14 @@
 #include <control.hpp>
 #include <guidance.hpp>
 #include <frc/shuffleboard/Shuffleboard.h>
+#include <studica/AHRS.h>
+#include <frc/smartdashboard/Field2d.h>
+#include <frc/smartdashboard/SendableChooser.h>
+#include <tuple>
 
 class Robot : public frc::TimedRobot {
 public:
-    Robot() : joystick(0) {}
+    Robot() : joystick(0), navx(studica::AHRS::NavXComType::kMXP_SPI) {}
 
     void RobotInit() override;
     void RobotPeriodic() override;
@@ -39,11 +43,18 @@ public:
     ~Robot();
 private:
     ss::SwerveModule *fl, *fr, *bl, *br;
-    ctre::phoenix6::hardware::TalonFX *fld, *flt, *frd, *frt, *bld, *blt, *brd, *brt, *outtakeActuator;
+    ctre::phoenix6::hardware::TalonFX *fld, *flt, *frd, *frt, *bld, *blt, *brd, *brt;
     ctre::phoenix6::hardware::CANcoder *fle, *fre, *ble, *bre;
+    ctre::phoenix::motorcontrol::can::TalonSRX *outtake;
     ctre::phoenix6::Orchestra *orchestra;
     ss::SwerveDrive *drive;
     frc::Joystick joystick;
+
+    studica::AHRS navx;
+
+    frc::Field2d fieldTelem;
+
+    frc::SendableChooser<std::pair<glm::vec2, std::vector<ss::AutonNavigation::PathNode>>> autoChooser;
 
     ss::Control *control;
     ss::TeleopNavigation *tnav;

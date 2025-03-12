@@ -6,11 +6,16 @@
 #include <glm/gtx/rotate_vector.hpp>
 #include <ctre/phoenix6/TalonFX.hpp>
 #include <ctre/phoenix6/CANcoder.hpp>
+
 #include <frc/smartdashboard/SmartDashboard.h>
+#include <frc/smartdashboard/SendableBuilderImpl.h>
+#include <wpi/sendable/Sendable.h>
 
 #include <glm/gtx/string_cast.hpp>
 #include <iostream>
 #define M_PI 3.1415926535
+
+#include <studica/AHRS.h>
 
 namespace ss {
 
@@ -53,14 +58,18 @@ public:
     ctre::phoenix6::hardware::CANcoder& m_encoder;
 };
 
-class SwerveDrive {
+class SwerveDrive : public wpi::Sendable {
 public:
-    SwerveDrive(std::vector<SwerveModule> modules) : m_modules(modules) {}
+    SwerveDrive(std::vector<SwerveModule> modules, studica::AHRS& navx) : m_modules(modules), m_navx(navx) {}
     /**
      * @param frameVelocity Target velocity (m/s) relative to the frame (+y = forward +x = right)
     */
     void set(glm::vec2 frameVelocity, float angularVelocity);
 
+    virtual void InitSendable(wpi::SendableBuilder& builder) override;
+
     std::vector<SwerveModule> m_modules;
+
+    studica::AHRS& m_navx;
 };
 }

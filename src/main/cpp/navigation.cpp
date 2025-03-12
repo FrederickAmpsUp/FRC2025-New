@@ -45,20 +45,6 @@ void TeleopNavigation::update_navigation() {
         this->m_desiredOuttakeAngle = c_outtakeHoldAlgae;
     }
 
-    if (this->m_joystick.GetRawButton(1)) {
-        this->m_desiredAlgaeIntakeAngle = c_algaeIntakeIdle;
-        this->m_desiredAlgaeIntakePower = 0.0;
-        this->m_desiredOuttakeAngle = c_outtakeReleaseAlgae;
-        this->m_desiredOuttakePower = -0.5;
-    }
-
-    if (this->m_joystick.GetRawButtonReleased(1)) {
-        this->m_desiredAlgaeIntakeAngle = c_algaeIntakeIdle;
-        this->m_desiredAlgaeIntakePower = 0.0;
-        this->m_desiredOuttakePower = 0;
-        this->m_desiredOuttakeAngle = c_outtakeIdle;
-    }
-
     if (this->m_joystick.GetRawButton(3)) {
         this->m_desiredOuttakePower = 0.4;
         this->m_desiredOuttakeAngle = c_outtakeIntakeAlgae;
@@ -75,7 +61,7 @@ void TeleopNavigation::update_navigation() {
     }
     if (this->m_joystick.GetRawButtonReleased(9)) {
         this->m_desiredOuttakePower = 0.0;
-        this->m_desiredOuttakeAngle = c_outtakeIdle;
+        this->m_desiredOuttakeAngle = c_outtakeReleaseCoral;
     }
 
         if (this->m_joystick.GetRawButton(10)) {
@@ -87,18 +73,58 @@ void TeleopNavigation::update_navigation() {
         this->m_desiredOuttakeAngle = c_outtakeIdle;
     }
 
+    if (this->m_joystick.GetRawButton(11)) {
+        this->m_desiredClimberPower = -0.8;
+        this->m_desiredOuttakeAngle = -c_outtakeOffset;
+    } else if (this->m_joystick.GetRawButton(12)) {
+        this->m_desiredOuttakeAngle = -c_outtakeOffset;
+        this->m_desiredClimberPower = 0.5;
+    } else {
+        this->m_desiredClimberPower = 0.0;
+    }
+
     unsigned int elevatorPos = this->m_joystick.GetRawButton(7) | (this->m_joystick.GetRawButton(8) << 1);
+    
     static const float elevatorPositions[] = {
-        0.0, 0.0, 0.45, 0.3 // TODO: determine the real positions
+        0.0, 0.13, 0.45, 0.0
     };
 
     static const float capstanPositions[] = {
-        0.0, 0.33, 0.33, 0.125 // TODO: determine real positions
+        0.0, 0.33, 0.33, 0.17
     };
 
+    if (elevatorPos == 3) {
+        this->m_desiredCapstanSlowness = 0.0;
+    } else {
+        this->m_desiredCapstanSlowness = 0.75;
+    }
+
+    if (this->m_joystick.GetRawButton(1) && elevatorPos == 0) {
+        this->m_desiredAlgaeIntakeAngle = c_algaeIntakeIdle;
+        this->m_desiredAlgaeIntakePower = 0.0;
+        this->m_desiredOuttakeAngle = c_outtakeReleaseAlgae;
+        this->m_desiredOuttakePower = -0.5;
+    }
+
+    if (this->m_joystick.GetRawButtonReleased(1) && elevatorPos == 0) {
+        this->m_desiredAlgaeIntakeAngle = c_algaeIntakeIdle;
+        this->m_desiredAlgaeIntakePower = 0.0;
+        this->m_desiredOuttakePower = 0;
+        this->m_desiredOuttakeAngle = c_outtakeIdle;
+    }
+
+    if (this->m_joystick.GetRawButton(1) && elevatorPos == 3) {
+        this->m_desiredCoralIntakeSpeed = -1.0;
+    } else if (this->m_joystick.GetRawButton(1) && elevatorPos != 0) {
+        this->m_desiredCoralIntakeSpeed = 1.0;
+    } else {
+        this->m_desiredCoralIntakeSpeed = 0.0;
+    }
+    
     this->m_desiredCapstanAngle = capstanPositions[elevatorPos];
     this->m_desiredElevatorHeight = elevatorPositions[elevatorPos];
 }
+
 
 void TeleopNavigation::begin_navigation() {
     // nothing here...
@@ -111,6 +137,12 @@ void AutonNavigation::begin_navigation() {
     this->m_nodeStartGuidance = this->m_guidance.info();
     this->m_driveErrorInt = glm::vec2(0);
     this->m_driveError = glm::vec2(0);
+
+    this->m_desiredAlgaeIntakeAngle = 0.0f;
+    this->m_desiredOuttakeAngle = TeleopNavigation::c_outtakeIdle;
+
+    this->m_desiredAlgaeIntakePower = 0.0f;
+    this->m_desiredOuttakePower = 0.0f;
 }
 
 void AutonNavigation::update_navigation() {
@@ -131,27 +163,28 @@ void AutonNavigation::update_navigation() {
             float nodeT = (currentTime - this->m_nodeStartTime) / node.duration;
             float easedNodeT = node.drive_to_pos.ease_fn? node.drive_to_pos.ease_fn(nodeT) : nodeT;
             
-            glm::vec2 fieldPos = this->m_guidance.info()->fieldPosition;
+            glm::dvec2 fieldPos = this->m_guidance.info()->fieldPosition;
             float fieldAng = this->m_guidance.info()->fieldAngle;
-            glm::vec2 desiredPos = (node.drive_to_pos.pos - this->m_nodeStartGuidance->fieldPosition) * easedNodeT + this->m_nodeStartGuidance->fieldPosition;
+            glm::dvec2 desiredPos = ((glm::dvec2)node.drive_to_pos.pos - this->m_nodeStartGuidance->fieldPosition) * (double)easedNodeT + this->m_nodeStartGuidance->fieldPosition;
             float desiredAng = (node.drive_to_pos.heading*2.0*M_PI - this->m_nodeStartGuidance->fieldAngle) * easedNodeT + this->m_nodeStartGuidance->fieldAngle;
 
             frc::SmartDashboard::PutNumber("target pos x", desiredPos.x);
             frc::SmartDashboard::PutNumber("target pos y", desiredPos.y);
 
-            glm::vec2 delPos = desiredPos - fieldPos;
-            float delAng = desiredAng - fieldAng;
-            while (delAng > 1.0) delAng -= 1.0;
-            while (delAng < 0.0) delAng += 1.0;
+            glm::dvec2 delPos = desiredPos - fieldPos;
+            float delAng = (desiredAng - fieldAng) / 2.0 * M_PI;
+            while (delAng >  0.5) delAng -= 1.0;
+            while (delAng < -0.5) delAng += 1.0;
+            delAng *= 2.0 * M_PI;
 
             frc::SmartDashboard::PutNumber("del pos x", delPos.x);
             frc::SmartDashboard::PutNumber("del pos y", delPos.y);
             frc::SmartDashboard::PutNumber("del ang", delAng);
 
-            glm::vec2 driveError = delPos * 20.0f;
+            glm::dvec2 driveError = delPos * 20.0;
 
-            glm::vec2 dedt = (driveError - this->m_driveError) * 20.0f;
-            this->m_driveErrorInt += driveError / 20.0f;
+            glm::dvec2 dedt = (driveError - this->m_driveError) * 20.0;
+            this->m_driveErrorInt += driveError / 20.0;
             this->m_driveError = driveError;
 
             float turnError = delAng * 20.0f;
@@ -159,7 +192,7 @@ void AutonNavigation::update_navigation() {
             this->m_turnErrorInt += turnError / 20.0f;
             this->m_turnError = turnError;
 
-            this->m_desiredDrive = driveError * drive_kP + this->m_driveErrorInt * drive_kI + dedt * drive_kD;
+            this->m_desiredDrive = driveError * (double)drive_kP + this->m_driveErrorInt * (double)drive_kI + dedt * (double)drive_kD;
             
             float driveAngle = glm::atan(this->m_desiredDrive.y, this->m_desiredDrive.x);
             driveAngle += this->m_guidance.info()->fieldAngle;
@@ -176,6 +209,10 @@ void AutonNavigation::update_navigation() {
                 this->m_desiredAlgaeIntakePower = -0.5;
             }
         } break;
+        case PathNode::Type::RELEASE_OUTTAKE_CORAL: {
+            this->m_desiredOuttakeAngle = TeleopNavigation::c_outtakeReleaseCoral;
+            this->m_desiredOuttakePower = -1.0;
+        } break;
         default:
             std::cerr << "ERR: invalid auto path node!" << std::endl;
     }
@@ -185,6 +222,10 @@ void AutonNavigation::update_navigation() {
         this->m_desiredTurn = 0.0f;
         this->m_desiredAlgaeIntakeAngle = 0.0f;
         this->m_desiredAlgaeIntakePower = 0.0f;
+
+        this->m_desiredAlgaeIntakeAngle = TeleopNavigation::c_outtakeIdle;
+        this->m_desiredOuttakePower = 0.0f;
+
         this->m_nodeStartTime = currentTime;
         this->m_pathIndex++;
 

@@ -4,13 +4,15 @@
 #include <navigation.hpp>
 #include <rev/SparkMax.h>
 #include <ctre/phoenix/motorcontrol/can/TalonSRX.h>
+#include <ctre/phoenix/motorcontrol/can/VictorSPX.h>
+#include <frc/Servo.h>
 #define M_PI 3.1415926535
 
 namespace ss {
 
 class Control {
 public:
-    Control(ss::SwerveDrive& swerve, ctre::phoenix6::hardware::TalonFX& outtakeActuator) : m_swerve(swerve), m_algaeIntakeWheel(13, rev::spark::SparkLowLevel::MotorType::kBrushless), m_outtakeWheel(14, rev::spark::SparkLowLevel::MotorType::kBrushless), m_algaeIntakeActuator(15), m_elevator(16, rev::spark::SparkLowLevel::MotorType::kBrushless), m_outtakeActuator(outtakeActuator), m_capstan(18) {
+    Control(ss::SwerveDrive& swerve, ctre::phoenix::motorcontrol::can::TalonSRX& outtake) : m_swerve(swerve), m_algaeIntakeWheel(13, rev::spark::SparkLowLevel::MotorType::kBrushless), m_outtakeWheel(14, rev::spark::SparkLowLevel::MotorType::kBrushless), m_algaeIntakeActuator(15), m_elevator(16, rev::spark::SparkLowLevel::MotorType::kBrushless), m_outtakeActuator(outtake), m_capstan(18), m_climber(19), m_coralIntake(0) {
         std::cout << "control init" << std::endl;
         
         this->m_algaeIntakeActuator.ConfigSelectedFeedbackSensor(ctre::phoenix::motorcontrol::TalonSRXFeedbackDevice::CTRE_MagEncoder_Absolute, 0, 0);
@@ -30,20 +32,19 @@ public:
 
         config.Inverted(false);
 
-        this->m_elevator.Configure(config, rev::spark::SparkBase::ResetMode::kNoResetSafeParameters, rev::spark::SparkBase::PersistMode::kNoPersistParameters);
-    
-        ctre::phoenix6::configs::Slot0Configs outConf = {};
+        this->m_elevator.Configure(config, rev::spark::SparkBase::ResetMode::kResetSafeParameters, rev::spark::SparkBase::PersistMode::kPersistParameters);
 
-        outConf.kP = 1.0;
-        outConf.kI = 0.0;
-        outConf.kD = 0.2;
+        this->m_outtakeActuator.Config_kP(0, 0.7);
+        this->m_outtakeActuator.Config_kI(0, 0.0);
+        this->m_outtakeActuator.Config_kD(0, 0.1);
 
-        this->m_outtakeActuator.GetConfigurator().Apply(outConf);
+        this->m_outtakeActuator.ConfigSelectedFeedbackSensor(ctre::phoenix::motorcontrol::FeedbackDevice::CTRE_MagEncoder_Relative, 0);
+        this->m_outtakeActuator.SetSensorPhase(false);
 
         ctre::phoenix6::configs::Slot0Configs capConf = {};
 
         capConf.kP = 5.0;
-        capConf.kI = 0.2;
+        capConf.kI = 0.5;
         capConf.kD = 0.1;
 
         this->m_capstan.GetConfigurator().Apply(capConf);
@@ -77,10 +78,7 @@ public:
             elevTimeLeft = (nav.get_desired_elevator_height() - elevPos) / elevVel;
         }
 
-        std::cout << elevTimeLeft << std::endl;
-
-        auto outCtr = ctre::phoenix6::controls::PositionVoltage(units::angle::radian_t(nav.get_desired_outtake_angle() * 108.0));
-        this->m_outtakeActuator.SetControl(outCtr);
+        this->m_outtakeActuator.Set(ctre::phoenix::motorcontrol::ControlMode::Position, nav.get_desired_outtake_angle() / (2.0 * M_PI) * -4096);
 
         if (this->m_capstanHomingStep == CapstanHomingStep::STOPPED) {
             this->m_capstanHomingStep = CapstanHomingStep::RUN_POSITIVE;
@@ -126,13 +124,17 @@ public:
             float lerpPos = glm::mix(curr, targ, 1.0 / itersLeft);
 
             if (elevTimeLeft < 0.1f) {
-                auto capCtr = ctre::phoenix6::controls::PositionVoltage(units::angle::turn_t(glm::mix(targ, curr, 0.95)));
+                auto capCtr = ctre::phoenix6::controls::PositionVoltage(units::angle::turn_t(glm::mix(targ, curr, nav.get_desired_capstan_slowness())));
                 this->m_capstan.SetControl(capCtr);
             } else {
                 auto capCtr = ctre::phoenix6::controls::PositionVoltage(units::angle::turn_t(lerpPos));
                 this->m_capstan.SetControl(capCtr);
             }
+
+            this->m_climber.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, nav.get_desired_climber_power());
         }
+
+        this->m_coralIntake.Set(nav.get_desired_coral_intake_speed() * 0.5 + 0.5);
     }
 
     ~Control() {
@@ -141,8 +143,10 @@ public:
 private:
     ss::SwerveDrive& m_swerve;
     rev::spark::SparkMax m_algaeIntakeWheel, m_outtakeWheel, m_elevator;
-    ctre::phoenix::motorcontrol::can::TalonSRX m_algaeIntakeActuator;
-    ctre::phoenix6::hardware::TalonFX& m_outtakeActuator, m_capstan;
+    ctre::phoenix::motorcontrol::can::TalonSRX m_algaeIntakeActuator, & m_outtakeActuator;
+    ctre::phoenix::motorcontrol::can::VictorSPX m_climber;
+    ctre::phoenix6::hardware::TalonFX m_capstan;
+    frc::Servo m_coralIntake;
 
     enum class CapstanHomingStep {
         STOPPED, RUN_POSITIVE, RUN_NEGATIVE, DONE
@@ -155,6 +159,6 @@ private:
 
     const float c_algaeIntakeActuatorOffset = -812 / 2048;
 
-    const float c_elevRevsPerM = 541.66666;
+    const float c_elevRevsPerM = 180.5555;
 };
 } // end namespace ss

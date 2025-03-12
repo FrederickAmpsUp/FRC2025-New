@@ -24,20 +24,24 @@ public:
     
     float get_desired_elevator_height() const { return this->m_desiredElevatorHeight; }
     float get_desired_capstan_angle() const { return this->m_desiredCapstanAngle; }
+    float get_desired_capstan_slowness() const { return this->m_desiredCapstanSlowness; }
+    float get_desired_coral_intake_speed() const { return this->m_desiredCoralIntakeSpeed; }
 
+    float get_desired_climber_power() const { return this->m_desiredClimberPower; }
 private:
     glm::vec2 m_desiredDrive = glm::vec2(0.0); // m/s
     float m_desiredTurn; // radians/s
 
     float m_desiredAlgaeIntakePower;
-    float m_desiredOuttakePower;
-    float m_desiredOuttakeAngle;
     // 0.0 is straight down, pi/2 is straight forward
     float m_desiredAlgaeIntakeAngle;
 
     float m_desiredElevatorHeight;
 
     float m_desiredCapstanAngle;
+    float m_desiredCoralIntakeSpeed;
+
+    float m_desiredClimberPower;
 public:
     static constexpr float c_maxDriveSpeed = 5.0; // m/s
     static constexpr float c_minDriveSpeed = 0.5; // m/s
@@ -46,18 +50,24 @@ public:
 
     static constexpr float c_algaeIntakeIdle = 0.0;
     static constexpr float c_algaeIntakeLower = 1.75;
-    static constexpr float c_algaeIntakeUpper = 2.15;
+    static constexpr float c_algaeIntakeUpper = 2.2;
 
-    // TODO: offset these for starting position
-    static constexpr float c_outtakeIdle = -2.25;
-    static constexpr float c_outtakeHoldAlgae = -1.5;
-    static constexpr float c_outtakeReleaseAlgae = -1.6;
-    static constexpr float c_outtakeIntakeAlgae = -1.2;
+    static constexpr float c_outtakeOffset = -2.38;
 
-    static constexpr float c_outtakeIntakeCoral = 0.0;
-    static constexpr float c_outtakeReleaseCoral = -1.5;
+    static constexpr float c_outtakeIdle = -2.25 - c_outtakeOffset;
+    static constexpr float c_outtakeHoldAlgae = -1.4 - c_outtakeOffset;
+    static constexpr float c_outtakeReleaseAlgae = -1.6 - c_outtakeOffset;
+    static constexpr float c_outtakeIntakeAlgae = -0.8 - c_outtakeOffset;
+
+    static constexpr float c_outtakeIntakeCoral = 0.0 - c_outtakeOffset;
+    static constexpr float c_outtakeReleaseCoral = -1.5 - c_outtakeOffset;
 
 private:
+    float m_desiredOuttakePower;
+    float m_desiredOuttakeAngle = c_outtakeIdle;
+
+    float m_desiredCapstanSlowness = 0.8;
+
     ss::Guidance& m_guidance;
 
     frc::Joystick& m_joystick;
@@ -79,14 +89,19 @@ public:
 #define UPPER 1
                 int level;
             } clean_algae;
+            struct {
+            } release_outtake_coral;
         };
         enum class Type {
             DRIVE_TO_POSITION,
-            CLEAN_ALGAE
+            CLEAN_ALGAE,
+            RELEASE_OUTTAKE_CORAL
         } type;
     };
 
     AutonNavigation(ss::Guidance& guidance, std::vector<PathNode> path) : m_guidance(guidance), m_path(path) {}
+
+    void set_path(std::vector<PathNode> path) { this->m_path = path; }
 
     void begin_navigation();
     void update_navigation();
@@ -96,11 +111,14 @@ public:
 
     float get_desired_algae_intake_power() const { return this->m_desiredAlgaeIntakePower; }
     float get_desired_algae_intake_angle() const { return this->m_desiredAlgaeIntakeAngle; }
-    float get_desired_outtake_power() const { return 0; }
-    float get_desired_outtake_angle() const { return 0; }
+    float get_desired_outtake_power() const { return this->m_desiredOuttakePower; }
+    float get_desired_outtake_angle() const { return this->m_desiredOuttakeAngle; }
     float get_desired_elevator_height() const { return 0; }
     float get_desired_capstan_angle() const { return 0; }
+    float get_desired_capstan_slowness() const { return 0; }
+    float get_desired_coral_intake_speed() const { return 0; }
 
+    float get_desired_climber_power() const { return 0; }
 private:
     float m_startTime;
     float m_nodeStartTime;
@@ -113,8 +131,11 @@ private:
     float m_desiredAlgaeIntakePower;
     float m_desiredAlgaeIntakeAngle;
 
-    glm::vec2 m_driveError;
-    glm::vec2 m_driveErrorInt;
+    float m_desiredOuttakePower;
+    float m_desiredOuttakeAngle;
+
+    glm::dvec2 m_driveError;
+    glm::dvec2 m_driveErrorInt;
 
     float m_turnError;
     float m_turnErrorInt;
@@ -123,9 +144,9 @@ private:
     const float drive_kI = 0.005f;
     const float drive_kD = 0.01f;
 
-    const float turn_kP = 0.20f;
-    const float turn_kI = 0.02f;
-    const float turn_kD = 0.02f;
+    const float turn_kP = 0.15f;
+    const float turn_kI = 0.01f;
+    const float turn_kD = 0.01f;
 
     ss::Guidance& m_guidance;
 };

@@ -18,6 +18,7 @@
   "files.associations": {
     "iosfwd": "cpp",
     "new": "cpp",
-    "cmath": "cpp"
+    "cmath": "cpp",
+    "*.inc": "cpp"
   }
 }

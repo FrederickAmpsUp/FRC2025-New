@@ -50,31 +50,44 @@ void Robot::RobotInit() {
 
   this->fl = new ss::SwerveModule(*this->fld, *this->flt, *this->fle, -0.25, glm::vec2(-frameHalfWidth, -frameHalfDepth));
   this->fr = new ss::SwerveModule(*this->frd, *this->frt, *this->fre, -0.07, glm::vec2( frameHalfWidth, -frameHalfDepth));
-  this->bl = new ss::SwerveModule(*this->bld, *this->blt, *this->ble, -0.19, glm::vec2(-frameHalfWidth,  frameHalfDepth));
-  this->br = new ss::SwerveModule(*this->brd, *this->brt, *this->bre,  0.02, glm::vec2( frameHalfWidth,  frameHalfDepth));
+  this->bl = new ss::SwerveModule(*this->bld, *this->blt, *this->ble, -0.19, glm::vec2(-frameHalfWidth, frameHalfDepth));
+  this->br = new ss::SwerveModule(*this->brd, *this->brt, *this->bre,  0.02, glm::vec2( frameHalfWidth, frameHalfDepth));
 
-  this->drive = new ss::SwerveDrive({*this->fl, *this->fr, *this->bl, *this->br});
+  this->drive = new ss::SwerveDrive({*this->bl, *this->br, *this->fl, *this->fr}, this->navx);
 
-  this->outtakeActuator = new ctre::phoenix6::hardware::TalonFX(17);
+  this->outtake = new ctre::phoenix::motorcontrol::can::TalonSRX(17);
 
-  this->guidance = new ss::Guidance(*this->drive, *this->outtakeActuator, glm::vec2(0.0));
+  this->autoChooser.AddOption("test auto 1", {
+    glm::vec2(0.0, 1.0),
+    {}
+  });
+
+  this->autoChooser.AddOption("test auto 2", {
+    glm::vec2(-1.0, 0.0),
+    {}
+  });
+
+  this->guidance = new ss::Guidance(*this->drive, *this->outtake, glm::vec2(0.0), this->navx);
   this->tnav = new ss::TeleopNavigation(this->joystick, *this->guidance);
   using PathNode = ss::AutonNavigation::PathNode;
-  this->anav = new ss::AutonNavigation(*this->guidance, {
-    ss::AutonNavigation::PathNode {
-      .duration = 2.0,
-      .clean_algae = {
-        LOWER
-      },
-      .type = ss::AutonNavigation::PathNode::Type::CLEAN_ALGAE
-    }
-  });
-  this->control = new ss::Control(*this->drive, *this->outtakeActuator);
+  this->anav = new ss::AutonNavigation(*this->guidance, {});
+  this->control = new ss::Control(*this->drive, *this->outtake);
 }
 void Robot::RobotPeriodic() {
+  this->guidance->update_guidance();
+  frc::SmartDashboard::PutData("swerve", this->drive);
+
+  this->fieldTelem.SetRobotPose(frc::Pose2d(units::meter_t(-this->guidance->info()->fieldPosition.y), units::meter_t(-this->guidance->info()->fieldPosition.x), frc::Rotation2d(units::radian_t(-this->guidance->info()->fieldAngle))));
+
+  frc::SmartDashboard::PutData("field", &this->fieldTelem);
+
+  frc::SmartDashboard::PutData("auton", &this->autoChooser);
 }
 
 void Robot::AutonomousInit() {
+  const auto& auton = this->autoChooser.GetSelected();
+  this->guidance->set_field_position(auton.first);
+  this->anav->set_path(auton.second);
   this->anav->begin_navigation();
 }
 void Robot::AutonomousPeriodic() {
@@ -91,7 +104,6 @@ void Robot::TeleopInit() {
   this->anav->begin_navigation();
 }
 void Robot::TeleopPeriodic() {
-  this->guidance->update_guidance();
   this->tnav->update_navigation();
   this->anav->update_navigation();
   frc::SmartDashboard::PutNumber("desired drive x", this->anav->get_desired_drive().x);
@@ -100,7 +112,11 @@ void Robot::TeleopPeriodic() {
 }
 
 void Robot::DisabledInit() {}
-void Robot::DisabledPeriodic() {}
+void Robot::DisabledPeriodic() {
+  const auto& auton = this->autoChooser.GetSelected();
+  this->guidance->set_field_position(auton.first);
+  this->anav->set_path(auton.second);
+}
 
 void Robot::TestInit() {}
 void Robot::TestPeriodic() {}
@@ -122,7 +138,8 @@ Robot::~Robot() {
   delete this->blt;
   delete this->brd;
   delete this->brt;
-  delete this->outtakeActuator;
+
+  delete this->outtake;
 
   delete this->orchestra;
 

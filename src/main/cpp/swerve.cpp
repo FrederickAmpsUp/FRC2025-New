@@ -1,5 +1,5 @@
 #include <swerve.hpp>
-#include <frc/smartdashboard/SmartDashboard.h>
+#include <string>
 
 using namespace ctre::phoenix6;
 
@@ -99,5 +99,33 @@ void SwerveDrive::set(glm::vec2 frameVelocity, float angularVelocity) {
         glm::vec2 vel = projectModulePos(dt, frameVelocity, angularVelocity, pos) * (1.0f / dt);
         mod.set(vel);
     }
+}
+
+void SwerveDrive::InitSendable(wpi::SendableBuilder& builder) {
+    builder.SetSmartDashboardType("SwerveDrive");
+
+    static const char *names[] = {
+        "Front Left Angle",
+        "Front Left Velocity",
+        
+        "Front Right Angle",
+        "Front Right Velocity",
+
+        "Back Left Angle",
+        "Back Left Velocity",
+
+        "Back Right Angle",
+        "Back Right Velocity",
+
+    };
+
+    int i = 0;
+    for (const SwerveModule& mod : this->m_modules) {
+        builder.AddDoubleProperty(names[i], [mod]() { return (double)((units::angle::radian_t)mod.m_turn.GetPosition().GetValue()) + 2.0*M_PI*mod.m_encoderOffset; }, [](double) {});
+        builder.AddDoubleProperty(names[i+1], [mod]() { return -2.0 * M_PI * (double)mod.m_drive.GetVelocity().GetValue() * SwerveModule::motorToWheelRatio * SwerveModule::wheelRadius; }, [](double) {});
+        i += 2;
+    }
+
+    builder.AddDoubleProperty("Robot Angle", [this]() { return -glm::radians(this->m_navx.GetAngle()); }, [](double) {});
 }
 }
