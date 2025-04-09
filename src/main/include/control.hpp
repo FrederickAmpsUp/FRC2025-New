@@ -147,11 +147,11 @@ private:
     ctre::phoenix::motorcontrol::can::VictorSPX m_climber;
     ctre::phoenix6::hardware::TalonFX m_capstan;
     frc::Servo m_coralIntake;
-
+public:
     enum class CapstanHomingStep {
         STOPPED, RUN_POSITIVE, RUN_NEGATIVE, DONE
     } m_capstanHomingStep = CapstanHomingStep::STOPPED;
-
+private:
     float m_capstanMaxPos;
     float m_capstanMinPos;
 

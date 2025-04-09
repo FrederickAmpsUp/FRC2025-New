@@ -77,8 +77,7 @@ void SwerveModule::set(float speed, float angle) {
 }
 
 const float SwerveModule::wheelRadius = 0.0508;
-                                            // 2.36 is calibration value
-const float SwerveModule::motorToWheelRatio = 2.36 / 5.01;
+const float SwerveModule::motorToWheelRatio = 1.0 / 5.01;
 const float SwerveModule::motorToTurnRatio = 1.0 / 13.3714;
 
 static glm::vec2 rotate(const glm::vec2& v, float radians) {
@@ -121,7 +120,7 @@ void SwerveDrive::InitSendable(wpi::SendableBuilder& builder) {
 
     int i = 0;
     for (const SwerveModule& mod : this->m_modules) {
-        builder.AddDoubleProperty(names[i], [mod]() { return (double)((units::angle::radian_t)mod.m_turn.GetPosition().GetValue()) + 2.0*M_PI*mod.m_encoderOffset; }, [](double) {});
+        builder.AddDoubleProperty(names[i], [mod]() { return -0.5 * M_PI + (double)((units::angle::radian_t)mod.m_turn.GetPosition().GetValue()) + 2.0*M_PI*mod.m_encoderOffset; }, [](double) {});
         builder.AddDoubleProperty(names[i+1], [mod]() { return -2.0 * M_PI * (double)mod.m_drive.GetVelocity().GetValue() * SwerveModule::motorToWheelRatio * SwerveModule::wheelRadius; }, [](double) {});
         i += 2;
     }

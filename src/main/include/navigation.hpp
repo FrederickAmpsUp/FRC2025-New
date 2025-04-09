@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 #include <frc/joystick.h>
 #include <guidance.hpp>
+#include <frc/geometry/Pose2d.h>
 #define M_PI 3.1415926535
 
 namespace ss {
@@ -44,18 +45,18 @@ private:
     float m_desiredClimberPower;
 public:
     static constexpr float c_maxDriveSpeed = 5.0; // m/s
-    static constexpr float c_minDriveSpeed = 0.5; // m/s
+    static constexpr float c_minDriveSpeed = 0.25; // m/s
     static constexpr float c_maxTurnSpeed = 2.0 * M_PI; // radians/s
-    static constexpr float c_minTurnSpeed = 0.5 * M_PI; // radians/s
+    static constexpr float c_minTurnSpeed = 0.25 * M_PI; // radians/s
 
     static constexpr float c_algaeIntakeIdle = 0.0;
     static constexpr float c_algaeIntakeLower = 1.75;
-    static constexpr float c_algaeIntakeUpper = 2.2;
+    static constexpr float c_algaeIntakeUpper = 2.35;
 
     static constexpr float c_outtakeOffset = -2.38;
 
     static constexpr float c_outtakeIdle = -2.25 - c_outtakeOffset;
-    static constexpr float c_outtakeHoldAlgae = -1.4 - c_outtakeOffset;
+    static constexpr float c_outtakeHoldAlgae = -1.3 - c_outtakeOffset;
     static constexpr float c_outtakeReleaseAlgae = -1.6 - c_outtakeOffset;
     static constexpr float c_outtakeIntakeAlgae = -0.8 - c_outtakeOffset;
 
@@ -109,6 +110,39 @@ public:
     glm::vec2 get_desired_drive() const { return this->m_desiredDrive; }
     float get_desired_turn() const { return this->m_desiredTurn; }
 
+    std::vector<frc::Pose2d> where_are_we_going() const {
+        glm::vec3 whereAreWeAre = glm::vec3(this->m_guidance.info()->fieldPosition, this->m_guidance.info()->fieldAngle / (2.0*M_PI));
+
+        if (this->m_pathIndex >= this->m_path.size()) return {};
+
+        const auto& node = this->m_path[this->m_pathIndex];
+
+        glm::vec3 whereAreWeGoing = whereAreWeAre;
+
+        if (node.type == PathNode::Type::DRIVE_TO_POSITION) {
+            whereAreWeGoing.x = node.drive_to_pos.pos.x;
+            whereAreWeGoing.y = node.drive_to_pos.pos.y;
+            whereAreWeGoing.z = node.drive_to_pos.heading;
+        }
+
+        std::vector<frc::Pose2d> nodes;
+
+        constexpr int iterations = 9;
+        for (int i = 0; i < iterations; i++) {
+            float t = (float)(i+1) / (float)iterations;
+
+            glm::vec3 whereWeWillBe = glm::mix(whereAreWeAre, whereAreWeGoing, t);
+
+            nodes.push_back(frc::Pose2d(
+                units::meter_t(whereWeWillBe.y),
+                -units::meter_t(whereWeWillBe.x),
+                -units::turn_t(whereWeWillBe.z)
+            ));
+        }
+
+        return nodes;
+    }
+
     float get_desired_algae_intake_power() const { return this->m_desiredAlgaeIntakePower; }
     float get_desired_algae_intake_angle() const { return this->m_desiredAlgaeIntakeAngle; }
     float get_desired_outtake_power() const { return this->m_desiredOuttakePower; }
@@ -144,9 +178,9 @@ private:
     const float drive_kI = 0.005f;
     const float drive_kD = 0.01f;
 
-    const float turn_kP = 0.15f;
-    const float turn_kI = 0.01f;
-    const float turn_kD = 0.01f;
+    const float turn_kP = 0.1f;
+    const float turn_kI = 0.002f;
+    const float turn_kD = 0.006f;
 
     ss::Guidance& m_guidance;
 };

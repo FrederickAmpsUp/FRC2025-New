@@ -13,12 +13,18 @@
 #include <frc/shuffleboard/Shuffleboard.h>
 #include <frc2/command/button/NetworkButton.h>
 #include <frc2/command/InstantCommand.h>
+#include <frc/DriverStation.h>
+#include <elasticlib.h>
 
 static float smoothstep(float x) {
   return 3.0f*x*x - 2.0f*x*x*x;
 }
 
 void Robot::RobotInit() {
+  //frc::CameraServer::StartAutomaticCapture();
+
+  elastic::SelectTab("Autonomous");
+
   this->frd = new ctre::phoenix6::hardware::TalonFX(0b000 + 1);
   this->frt = new ctre::phoenix6::hardware::TalonFX(0b001 + 1);
   this->fld = new ctre::phoenix6::hardware::TalonFX(0b010 + 1);
@@ -59,7 +65,17 @@ void Robot::RobotInit() {
 
   this->autoChooser.AddOption("test auto 1", {
     glm::vec2(0.0, 1.0),
-    {}
+    {
+      {
+        .duration = 2.5,
+        .drive_to_pos = {
+          .pos = glm::vec2(0.0),
+          .heading = 0.0,
+          .ease_fn = smoothstep
+        },
+        .type= ss::AutonNavigation::PathNode::Type::DRIVE_TO_POSITION
+      }
+    }
   });
 
   this->autoChooser.AddOption("test auto 2", {
@@ -67,24 +83,168 @@ void Robot::RobotInit() {
     {}
   });
 
-  this->guidance = new ss::Guidance(*this->drive, *this->outtake, glm::vec2(0.0), this->navx);
+  this->autoChooser.AddOption("right side coral -> l1", {
+    glm::vec2(-0.515, 7.110),
+    {
+      ss::AutonNavigation::PathNode {
+        .duration = 2.07,
+        .drive_to_pos = {
+          .pos = glm::vec2(-2.858, 5.175),
+          .heading = 0.159,
+          .ease_fn = smoothstep
+        },
+        .type = ss::AutonNavigation::PathNode::Type::DRIVE_TO_POSITION
+      },
+      ss::AutonNavigation::PathNode {
+        .duration = 2.0,
+        .type = ss::AutonNavigation::PathNode::Type::RELEASE_OUTTAKE_CORAL
+      }
+    }
+  });
+
+  this->autoChooser.AddOption("left side coral -> l1", {
+    glm::vec2(-7.525, 7.110),
+    {
+      ss::AutonNavigation::PathNode {
+        .duration = 2.07,
+        .drive_to_pos = {
+          .pos = glm::vec2(-5.212, 5.175),
+          .heading = -0.105,
+          .ease_fn = smoothstep
+        },
+        .type = ss::AutonNavigation::PathNode::Type::DRIVE_TO_POSITION
+      },
+      ss::AutonNavigation::PathNode {
+        .duration = 2.0,
+        .type = ss::AutonNavigation::PathNode::Type::RELEASE_OUTTAKE_CORAL
+      }
+    }
+  });
+
+  this->autoChooser.AddOption("center coral -> l1", {
+    glm::vec2(-4.000, 7.110),
+    {
+      ss::AutonNavigation::PathNode {
+        .duration = 2.07,
+        .drive_to_pos = {
+          .pos = glm::vec2(-4.000, 5.833),
+          .heading = 0.0,
+          .ease_fn = smoothstep
+        },
+        .type = ss::AutonNavigation::PathNode::Type::DRIVE_TO_POSITION
+      },
+      ss::AutonNavigation::PathNode {
+        .duration = 2.0,
+        .type = ss::AutonNavigation::PathNode::Type::RELEASE_OUTTAKE_CORAL
+      }
+    }
+  });
+
+  this->autoChooser.AddOption("dummy coral", {
+    glm::vec2(0.0),
+    {
+      ss::AutonNavigation::PathNode {
+        .duration = 2.0,
+        .type = ss::AutonNavigation::PathNode::Type::RELEASE_OUTTAKE_CORAL
+      }
+    }
+  });
+
+  this->autoChooser.AddOption("do nothing (start right wall)", {
+      glm::vec2(-0.515, 7.110),
+      { /* nothing */ }
+  });
+
+  this->autoChooser.AddOption("do nothing (start left wall)", {
+      glm::vec2(-7.525, 7.110),
+      { /* nothing */ }
+  });
+  
+  this->autoChooser.AddOption("do nothing (start center)", {
+      glm::vec2(-4.000, 7.110),
+      { /* nothing */ }
+  });
+
+  this->autoChooser.AddOption("leave", {
+      glm::vec2(0),
+      {
+        ss::AutonNavigation::PathNode {
+          .duration = 13,
+          .drive_to_pos = {
+            .pos = glm::vec2(0, -1),
+            .heading = 0.0,
+            .ease_fn = smoothstep
+          },
+          .type = ss::AutonNavigation::PathNode::Type::DRIVE_TO_POSITION
+        },
+      }
+  });
+
+  this->guidance = new ss::Guidance(*this->drive, *this->outtake, this->navx);
   this->tnav = new ss::TeleopNavigation(this->joystick, *this->guidance);
   using PathNode = ss::AutonNavigation::PathNode;
   this->anav = new ss::AutonNavigation(*this->guidance, {});
   this->control = new ss::Control(*this->drive, *this->outtake);
+
+  frc::SmartDashboard::PutBoolean("NAVX/Reset", false);
+  frc::SmartDashboard::PutString("NAVX/IMORTANT", "Make sure robot is facing away from DS!");
+
+  frc::SmartDashboard::PutBoolean("Capstan/Reset", false);
 }
 void Robot::RobotPeriodic() {
   this->guidance->update_guidance();
   frc::SmartDashboard::PutData("swerve", this->drive);
 
-  this->fieldTelem.SetRobotPose(frc::Pose2d(units::meter_t(-this->guidance->info()->fieldPosition.y), units::meter_t(-this->guidance->info()->fieldPosition.x), frc::Rotation2d(units::radian_t(-this->guidance->info()->fieldAngle))));
+  this->fieldTelem.SetRobotPose(frc::Pose2d(units::meter_t(this->guidance->info()->fieldPosition.y), units::meter_t(-this->guidance->info()->fieldPosition.x), frc::Rotation2d(units::radian_t(-this->guidance->info()->fieldAngle))));
+
+  frc::FieldObject2d *whereAreWeGoing = this->fieldTelem.GetObject("where going?");
+  frc::FieldObject2d *whereWeWillFinish = this->fieldTelem.GetObject("where we will finish");
+
+  auto path = this->anav->where_are_we_going();
+
+  whereAreWeGoing->SetPoses(path);
+  if (path.size() > 0) {
+    whereWeWillFinish->SetPose(path[path.size() - 1]);
+  }
 
   frc::SmartDashboard::PutData("field", &this->fieldTelem);
 
   frc::SmartDashboard::PutData("auton", &this->autoChooser);
+
+  if (frc::SmartDashboard::GetBoolean("NAVX/Reset", false)) {
+    this->navx.Reset();
+    this->navx.SetAngleAdjustment(0);
+    frc::SmartDashboard::PutBoolean("NAVX/Reset", false);
+  }
+
+  if (frc::SmartDashboard::GetBoolean("Capstan/Reset", false)) {
+    this->control->m_capstanHomingStep = ss::Control::CapstanHomingStep::STOPPED;
+    frc::SmartDashboard::PutBoolean("Capstan/Reset", false);
+  }
+
+  units::second_t matchTime = frc::DriverStation::GetMatchTime();
+  frc::SmartDashboard::PutNumber("Match Time", (double)matchTime);
+
+  auto voltage = frc::RobotController::GetBatteryVoltage();
+  frc::SmartDashboard::PutNumber("Battery Voltage", (double)voltage);
+
+  auto alliance = frc::DriverStation::GetAlliance();
+
+  std::string hexColor = "#000000";
+
+  if (alliance.has_value()) {
+    if (*alliance == frc::DriverStation::kRed) {
+      hexColor = "#FF0000";
+    } else {
+      hexColor = "#0000FF";
+    }
+  }
+
+  frc::SmartDashboard::PutString("Alliance Color", hexColor);
 }
 
 void Robot::AutonomousInit() {
+  elastic::SelectTab("Autonomous");
   const auto& auton = this->autoChooser.GetSelected();
   this->guidance->set_field_position(auton.first);
   this->anav->set_path(auton.second);
@@ -99,6 +259,7 @@ void Robot::AutonomousPeriodic() {
 }
 
 void Robot::TeleopInit() {
+  elastic::SelectTab("Teleoperated");
   this->orchestra->Stop();
   this->tnav->begin_navigation();
   this->anav->begin_navigation();

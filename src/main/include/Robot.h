@@ -15,6 +15,7 @@
 #include <frc/shuffleboard/Shuffleboard.h>
 #include <studica/AHRS.h>
 #include <frc/smartdashboard/Field2d.h>
+#include <frc/smartdashboard/FieldObject2d.h>
 #include <frc/smartdashboard/SendableChooser.h>
 #include <tuple>
 

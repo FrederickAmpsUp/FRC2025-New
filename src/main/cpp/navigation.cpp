@@ -14,7 +14,10 @@ void TeleopNavigation::update_navigation() {
     glm::vec2 driveSpeed = drivePower * glm::mix(c_minDriveSpeed, c_maxDriveSpeed, throttle);
 
     float turnPower = this->m_joystick.GetTwist();
-    if (glm::abs(turnPower) < 0.1) turnPower = 0.0;
+    if (glm::abs(turnPower) < 0.2) turnPower = 0.0;
+
+    turnPower -= glm::sign(turnPower) * 0.2;
+    turnPower /= 0.8;
 
     float turnSpeed = turnPower * glm::mix(c_minTurnSpeed, c_maxTurnSpeed, throttle);
 
@@ -29,13 +32,9 @@ void TeleopNavigation::update_navigation() {
     if (this->m_joystick.GetRawButton(4)) {
         this->m_desiredAlgaeIntakePower = 0.5;
         this->m_desiredAlgaeIntakeAngle = c_algaeIntakeLower;
-        this->m_desiredOuttakePower = -0.3;
-        this->m_desiredOuttakeAngle = c_outtakeHoldAlgae;
     } else if (this->m_joystick.GetRawButton(6)) {
         this->m_desiredAlgaeIntakePower = -0.5;
         this->m_desiredAlgaeIntakeAngle = c_algaeIntakeUpper;
-        this->m_desiredOuttakePower = -0.3;
-        this->m_desiredOuttakeAngle = c_outtakeHoldAlgae;
     }
 
     if (this->m_joystick.GetRawButton(2)) {
@@ -86,11 +85,11 @@ void TeleopNavigation::update_navigation() {
     unsigned int elevatorPos = this->m_joystick.GetRawButton(7) | (this->m_joystick.GetRawButton(8) << 1);
     
     static const float elevatorPositions[] = {
-        0.0, 0.13, 0.45, 0.0
+        0.0, 0.13, 0.48, 0.0
     };
 
     static const float capstanPositions[] = {
-        0.0, 0.33, 0.33, 0.17
+        0.0, 0.33, 0.33, 0.165
     };
 
     if (elevatorPos == 3) {
@@ -139,7 +138,7 @@ void AutonNavigation::begin_navigation() {
     this->m_driveError = glm::vec2(0);
 
     this->m_desiredAlgaeIntakeAngle = 0.0f;
-    this->m_desiredOuttakeAngle = TeleopNavigation::c_outtakeIdle;
+    this->m_desiredOuttakeAngle = TeleopNavigation::c_outtakeReleaseCoral;
 
     this->m_desiredAlgaeIntakePower = 0.0f;
     this->m_desiredOuttakePower = 0.0f;
